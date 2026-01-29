@@ -62,6 +62,20 @@ class Piper(Tower):
         super().__init__(rect, 100, 20, 1.0, image)
 
 
+class Spike(Tower):
+    """Spike has fast reload and deals moderate damage."""
+    
+    size = (40, 40)
+    image = pygame.transform.scale(spike_image, size)
+    
+    def __init__(self, center_pos):
+        rect = pygame.Rect(0, 0, 40, 40)
+        rect.center = (int(center_pos[0]), int(center_pos[1]))
+        image = spike_image
+        image = pygame.transform.scale(image, self.size)
+        super().__init__(rect, 80, 10, 2.0, image)
+
+
 class Projectile:
     """A projectile fired by a tower that travels to its target."""
     def __init__(self, position, target, damage, speed=7):

@@ -13,8 +13,19 @@ clock = pygame.time.Clock()
 # sidebar area
 sidebar = pygame.Rect(650, 0, 150, 600)
 
-# palette icon inside sidebar for BlueTower
-palette_icon_rect = pygame.Rect(sidebar.left + 10, sidebar.top + 60, 50, 50)
+# Tower types available for placement
+TOWER_TYPES = {
+    'piper': {
+        'class': Piper,
+        'image': piper_image,
+        'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 60, 50, 50),
+    },
+    'spike': {
+        'class': Spike,
+        'image': spike_image,
+        'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 130, 50, 50),
+    },
+}
 
 # placed towers
 towers = []
@@ -24,7 +35,7 @@ projectiles = []
 
 # dragging state
 dragging = False
-drag_type = None
+dragging_tower_type = None
 drag_pos = (0, 0)
 
 # Define a path as straight-line waypoints (avoid the sidebar area on the right)
@@ -52,11 +63,13 @@ while running:
             enemies.append(Enemy(path, speed=2.5))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            # start dragging if clicked the palette icon
-            if palette_icon_rect.collidepoint(mx, my):
-                dragging = True
-                drag_type = 'blue'
-                drag_pos = (mx, my)
+            # Check if clicked on any tower icon in the sidebar
+            for tower_type, tower_data in TOWER_TYPES.items():
+                if tower_data['rect'].collidepoint(mx, my):
+                    dragging = True
+                    dragging_tower_type = tower_type
+                    drag_pos = (mx, my)
+                    break
         elif event.type == pygame.MOUSEMOTION:
             if dragging:
                 drag_pos = event.pos
@@ -65,11 +78,11 @@ while running:
                 mx, my = event.pos
                 # only allow placement outside sidebar
                 if mx < sidebar.left:
-                    if drag_type == 'blue':
-                        towers.append(Piper((mx, my)))
+                    tower_class = TOWER_TYPES[dragging_tower_type]['class']
+                    towers.append(tower_class((mx, my)))
                 # stop dragging regardless
                 dragging = False
-                drag_type = None
+                dragging_tower_type = None
 
     # update enemies (frame-based)
     for e in enemies:
@@ -118,14 +131,16 @@ while running:
     health_text = font.render(f"Health: {health}", True, (0, 0, 0))
     screen.blit(health_text, (sidebar.left + 10, 10))
     
-    # draw palette icon (blue tower image)
-    screen.blit(piper_image, palette_icon_rect)
+    # draw tower palette icons
+    for tower_type, tower_data in TOWER_TYPES.items():
+        screen.blit(tower_data['image'], tower_data['rect'])
 
     # draw dragging preview
-    if dragging and drag_type == 'blue':
+    if dragging and dragging_tower_type:
         mx, my = drag_pos
-        preview_rect = piper_image.get_rect(center=(mx, my))
-        screen.blit(piper_image, preview_rect)
+        tower_image = TOWER_TYPES[dragging_tower_type]['image']
+        preview_rect = tower_image.get_rect(center=(mx, my))
+        screen.blit(tower_image, preview_rect)
 
     pygame.display.flip()
 
