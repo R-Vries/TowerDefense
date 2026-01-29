@@ -71,7 +71,7 @@ def draw_game_over(final_health):
     pygame.draw.rect(screen, (100, 200, 100), start_button)
     pygame.draw.rect(screen, (0, 0, 0), start_button, 3)
     
-    button_text = font_subtitle.render("MENU", True, (0, 0, 0))
+    button_text = font_subtitle.render("PLAY AGAIN", True, (0, 0, 0))
     button_text_rect = button_text.get_rect(center=start_button.center)
     screen.blit(button_text, button_text_rect)
     
@@ -111,11 +111,13 @@ while running:
                     game_data = init_game()
                     pygame.time.set_timer(SPAWN_EVENT, 1500)
         elif current_state == GAME_OVER:
+            pygame.time.set_timer(SPAWN_EVENT, 0)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 if start_button.collidepoint(mx, my):
-                    current_state = MENU
-                    pygame.time.set_timer(SPAWN_EVENT, 0)
+                    current_state = PLAYING
+                    game_data = init_game()
+                    pygame.time.set_timer(SPAWN_EVENT, 1500)
         elif current_state == PLAYING:
             if event.type == SPAWN_EVENT:
                 # speed is pixels per frame; choose ~2-3 for smooth movement at 60 FPS
