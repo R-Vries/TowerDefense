@@ -30,6 +30,11 @@ TOWER_TYPES = {
         'image': spike_image,
         'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 130, 50, 50),
     },
+    'jacky': {
+        'class': Jacky,
+        'image': jacky_image,
+        'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 200, 50, 50),
+    },
 }
 
 # Start button
