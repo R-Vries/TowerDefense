@@ -90,6 +90,23 @@ def init_game():
         'path': Path([(50, 300), (300, 300), (300, 150), (600, 150)]),
     }
 
+def draw_game_objects(game_data):
+    """Draw path, towers, projectiles and enemies."""
+    # path
+    game_data['path'].draw(screen)
+
+    # draw towers
+    for tw in game_data['towers']:
+        tw.draw(screen)
+
+    # draw projectiles
+    for proj in game_data['projectiles']:
+        proj.draw(screen)
+
+    # draw enemies
+    for e in game_data['enemies']:
+        e.draw(screen)
+
 # Game state
 current_state = MENU
 game_data = init_game()
@@ -180,19 +197,7 @@ while running:
         # draw
         screen.fill((255, 255, 255))
 
-        game_data['path'].draw(screen)
-
-        # draw towers
-        for tw in game_data['towers']:
-            tw.draw(screen)
-
-        # draw projectiles
-        for proj in game_data['projectiles']:
-            proj.draw(screen)
-
-        # draw enemies
-        for e in game_data['enemies']:
-            e.draw(screen)
+        draw_game_objects(game_data)
 
         # sidebar
         pygame.draw.rect(screen, (200, 200, 200), sidebar)
