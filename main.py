@@ -1,6 +1,7 @@
 import pygame
 from classes import *
 from towers import *
+from images import *
 
 pygame.init()
 
@@ -13,7 +14,7 @@ clock = pygame.time.Clock()
 sidebar = pygame.Rect(650, 0, 150, 600)
 
 # palette icon inside sidebar for BlueTower
-palette_icon_rect = pygame.Rect(sidebar.left + 10, 20, 50, 50)
+palette_icon_rect = pygame.Rect(sidebar.left + 10, sidebar.top + 60, 50, 50)
 
 # placed towers
 towers = []
@@ -35,6 +36,9 @@ enemies = []
 spawn_interval = 1500  # milliseconds between spawns
 SPAWN_EVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_EVENT, spawn_interval)
+
+# Health counter
+health = 20
 
 running = True
 while running:
@@ -62,7 +66,7 @@ while running:
                 # only allow placement outside sidebar
                 if mx < sidebar.left:
                     if drag_type == 'blue':
-                        towers.append(BlueTower((mx, my)))
+                        towers.append(Piper((mx, my)))
                 # stop dragging regardless
                 dragging = False
                 drag_type = None
@@ -70,6 +74,13 @@ while running:
     # update enemies (frame-based)
     for e in enemies:
         e.update()
+    
+    # check for enemies that reached the end
+    for e in enemies:
+        if e.reached_end and e.health > 0:
+            health -= 1
+            e.health = 0  # prevent multiple health loss from same enemy
+    
     enemies = [e for e in enemies if e.is_alive()]
 
     # update towers and collect projectiles
@@ -101,22 +112,20 @@ while running:
 
     # sidebar
     pygame.draw.rect(screen, (200, 200, 200), sidebar)
-    # draw palette icon (blue tower sample)
-    pygame.draw.rect(screen, (180, 180, 180), palette_icon_rect)
-    # draw a small blue tower in the icon
-    sample_rect = pygame.Rect(0, 0, 36, 36)
-    sample_rect.center = palette_icon_rect.center
-    pygame.draw.rect(screen, (0, 0, 255), sample_rect)
+    
+    # draw health counter
+    font = pygame.font.Font(None, 36)
+    health_text = font.render(f"Health: {health}", True, (0, 0, 0))
+    screen.blit(health_text, (sidebar.left + 10, 10))
+    
+    # draw palette icon (blue tower image)
+    screen.blit(piper_image, palette_icon_rect)
 
     # draw dragging preview
     if dragging and drag_type == 'blue':
         mx, my = drag_pos
-        preview_rect = pygame.Rect(0, 0, 40, 40)
-        preview_rect.center = (mx, my)
-        # semi-transparent preview: draw with a border and transparent fill not directly supported,
-        # so draw a filled rect with lighter color and a black border
-        pygame.draw.rect(screen, (100, 100, 255), preview_rect)
-        pygame.draw.rect(screen, (0, 0, 0), preview_rect, 2)
+        preview_rect = piper_image.get_rect(center=(mx, my))
+        screen.blit(piper_image, preview_rect)
 
     pygame.display.flip()
 
