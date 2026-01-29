@@ -2,11 +2,12 @@ import pygame
 import math
 
 class Tower:
-    def __init__(self, position, range, damage, fire_rate):
-        self.position = position # a rect
+    def __init__(self, position, range, damage, fire_rate, color=(120, 120, 120)):
+        self.position = position # a pygame.Rect
         self.range = range
         self.damage = damage
         self.fire_rate = fire_rate
+        self.color = color
 
     def upgrade(self):
         self.range += 10
@@ -14,7 +15,17 @@ class Tower:
         self.fire_rate *= 0.9
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0, 0, 255), self.position)
+        pygame.draw.rect(screen, self.color, self.position)
+
+
+class BlueTower(Tower):
+    """A specific tower type (blue)."""
+    def __init__(self, center_pos, range=100, damage=20, fire_rate=1.0, size=40):
+        rect = pygame.Rect(0, 0, size, size)
+        rect.center = (int(center_pos[0]), int(center_pos[1]))
+        super().__init__(rect, range, damage, fire_rate, color=(0, 0, 255))
+
+    # Inherit draw from Tower (blue rect). Additional behavior can be added later.
 
 
 class Path:
@@ -27,6 +38,14 @@ class Path:
             raise ValueError("Path requires at least two points")
         # normalize to tuples of floats
         self.points = [(float(p[0]), float(p[1])) for p in points]
+
+    def draw(self, screen):
+        # draw path (polyline)
+        pygame.draw.lines(screen, (0, 180, 0), False, [(int(p[0]), int(p[1])) for p in self.points], 6)
+        # draw start and end markers
+        pygame.draw.circle(screen, (0, 0, 0), (int(self.points[0][0]), int(self.points[0][1])), 6)
+        pygame.draw.circle(screen, (0, 0, 0), (int(self.points[-1][0]), int(self.points[-1][1])), 6)
+
 
 
 class Enemy:
