@@ -1,5 +1,6 @@
 import pygame
 from classes import *
+from towers import *
 
 pygame.init()
 
@@ -16,6 +17,9 @@ palette_icon_rect = pygame.Rect(sidebar.left + 10, 20, 50, 50)
 
 # placed towers
 towers = []
+
+# projectiles
+projectiles = []
 
 # dragging state
 dragging = False
@@ -68,6 +72,16 @@ while running:
         e.update()
     enemies = [e for e in enemies if e.is_alive()]
 
+    # update towers and collect projectiles
+    for tower in towers:
+        new_projectiles = tower.update(enemies)
+        projectiles.extend(new_projectiles)
+
+    # update projectiles
+    for projectile in projectiles:
+        projectile.update()
+    projectiles = [p for p in projectiles if p.is_active()]
+
     # draw
     screen.fill((255, 255, 255))
 
@@ -76,6 +90,10 @@ while running:
     # draw towers
     for tw in towers:
         tw.draw(screen)
+
+    # draw projectiles
+    for proj in projectiles:
+        proj.draw(screen)
 
     # draw enemies
     for e in enemies:

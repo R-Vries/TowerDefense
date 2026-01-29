@@ -1,33 +1,6 @@
 import pygame
 import math
 
-class Tower:
-    def __init__(self, position, range, damage, fire_rate, color=(120, 120, 120)):
-        self.position = position # a pygame.Rect
-        self.range = range
-        self.damage = damage
-        self.fire_rate = fire_rate
-        self.color = color
-
-    def upgrade(self):
-        self.range += 10
-        self.damage += 5
-        self.fire_rate *= 0.9
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.position)
-
-
-class BlueTower(Tower):
-    """A specific tower type (blue)."""
-    def __init__(self, center_pos, range=100, damage=20, fire_rate=1.0, size=40):
-        rect = pygame.Rect(0, 0, size, size)
-        rect.center = (int(center_pos[0]), int(center_pos[1]))
-        super().__init__(rect, range, damage, fire_rate, color=(0, 0, 255))
-
-    # Inherit draw from Tower (blue rect). Additional behavior can be added later.
-
-
 class Path:
     """A simple polyline path defined by a list of (x, y) waypoints.
 
@@ -47,15 +20,16 @@ class Path:
         pygame.draw.circle(screen, (0, 0, 0), (int(self.points[-1][0]), int(self.points[-1][1])), 6)
 
 
-
 class Enemy:
-    def __init__(self, path: Path, speed=2.0, radius=10, color=(200, 40, 40)):
+    def __init__(self, path: Path, speed=2.0, radius=10, health=100, color=(200, 40, 40)):
         """speed is interpreted as pixels per frame (not per second)."""
         self.path = path
         self.pos = [self.path.points[0][0], self.path.points[0][1]]
         self.current_wp = 1 # current waypoint focus
         self.speed = float(speed)  # pixels per frame
         self.radius = radius
+        self.health = health
+        self.max_health = health
         self.color = color
         self.reached_end = False
 
@@ -94,6 +68,25 @@ class Enemy:
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), self.radius)
+        
+        # Draw health bar above enemy
+        if self.health < self.max_health:
+            bar_width = 20
+            bar_height = 4
+            bar_x = int(self.pos[0]) - bar_width // 2
+            bar_y = int(self.pos[1]) - self.radius - 8
+            
+            # Background (red)
+            pygame.draw.rect(screen, (200, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+            # Health (green)
+            health_ratio = self.health / self.max_health
+            pygame.draw.rect(screen, (0, 200, 0), (bar_x, bar_y, int(bar_width * health_ratio), bar_height))
+
+    def take_damage(self, damage):
+        """Reduce health by damage amount."""
+        self.health -= damage
+        if self.health <= 0:
+            self.reached_end = True
 
     def is_alive(self):
-        return not self.reached_end
+        return not self.reached_end and self.health > 0
