@@ -10,6 +10,11 @@ pygame.display.set_caption("Tower Defense")
 
 clock = pygame.time.Clock()
 
+# Game states
+MENU = "menu"
+PLAYING = "playing"
+GAME_OVER = "game_over"
+
 # sidebar area
 sidebar = pygame.Rect(650, 0, 150, 600)
 
@@ -27,29 +32,69 @@ TOWER_TYPES = {
     },
 }
 
-# placed towers
-towers = []
+# Start button
+start_button = pygame.Rect(300, 250, 200, 100)
 
-# projectiles
-projectiles = []
+def draw_menu():
+    """Draw the main menu screen."""
+    screen.fill((255, 255, 255))
+    
+    font_title = pygame.font.Font(None, 72)
+    font_button = pygame.font.Font(None, 48)
+    
+    title_text = font_title.render("Tower Defense", True, (0, 0, 0))
+    title_rect = title_text.get_rect(center=(400, 100))
+    screen.blit(title_text, title_rect)
+    
+    # Draw start button
+    pygame.draw.rect(screen, (100, 200, 100), start_button)
+    pygame.draw.rect(screen, (0, 0, 0), start_button, 3)
+    
+    button_text = font_button.render("START", True, (0, 0, 0))
+    button_text_rect = button_text.get_rect(center=start_button.center)
+    screen.blit(button_text, button_text_rect)
+    
+    pygame.display.flip()
 
-# dragging state
-dragging = False
-dragging_tower_type = None
-drag_pos = (0, 0)
+def draw_game_over(final_health):
+    """Draw the game over screen."""
+    screen.fill((255, 255, 255))
+    
+    font_title = pygame.font.Font(None, 72)
+    font_subtitle = pygame.font.Font(None, 48)
+    
+    title_text = font_title.render("GAME OVER", True, (200, 0, 0))
+    title_rect = title_text.get_rect(center=(400, 150))
+    screen.blit(title_text, title_rect)
+    
+    # Draw start button (to return to menu)
+    pygame.draw.rect(screen, (100, 200, 100), start_button)
+    pygame.draw.rect(screen, (0, 0, 0), start_button, 3)
+    
+    button_text = font_subtitle.render("MENU", True, (0, 0, 0))
+    button_text_rect = button_text.get_rect(center=start_button.center)
+    screen.blit(button_text, button_text_rect)
+    
+    pygame.display.flip()
 
-# Define a path as straight-line waypoints (avoid the sidebar area on the right)
-path_points = [(50, 300), (300, 300), (300, 150), (600, 150)]
-path = Path(path_points)
+def init_game():
+    """Initialize game variables."""
+    return {
+        'towers': [],
+        'projectiles': [],
+        'enemies': [],
+        'dragging': False,
+        'dragging_tower_type': None,
+        'drag_pos': (0, 0),
+        'health': 20,
+        'path': Path([(50, 300), (300, 300), (300, 150), (600, 150)]),
+    }
 
-# Enemy management
-enemies = []
-spawn_interval = 1500  # milliseconds between spawns
+# Game state
+current_state = MENU
+game_data = init_game()
+
 SPAWN_EVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(SPAWN_EVENT, spawn_interval)
-
-# Health counter
-health = 20
 
 running = True
 while running:
@@ -58,90 +103,114 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == SPAWN_EVENT:
-            # speed is pixels per frame; choose ~2-3 for smooth movement at 60 FPS
-            enemies.append(Enemy(path, speed=2.5))
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mx, my = event.pos
-            # Check if clicked on any tower icon in the sidebar
-            for tower_type, tower_data in TOWER_TYPES.items():
-                if tower_data['rect'].collidepoint(mx, my):
-                    dragging = True
-                    dragging_tower_type = tower_type
-                    drag_pos = (mx, my)
-                    break
-        elif event.type == pygame.MOUSEMOTION:
-            if dragging:
-                drag_pos = event.pos
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if dragging:
+        elif current_state == MENU:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
-                # only allow placement outside sidebar
-                if mx < sidebar.left:
-                    tower_class = TOWER_TYPES[dragging_tower_type]['class']
-                    towers.append(tower_class((mx, my)))
-                # stop dragging regardless
-                dragging = False
-                dragging_tower_type = None
+                if start_button.collidepoint(mx, my):
+                    current_state = PLAYING
+                    game_data = init_game()
+                    pygame.time.set_timer(SPAWN_EVENT, 1500)
+        elif current_state == GAME_OVER:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                if start_button.collidepoint(mx, my):
+                    current_state = MENU
+                    pygame.time.set_timer(SPAWN_EVENT, 0)
+        elif current_state == PLAYING:
+            if event.type == SPAWN_EVENT:
+                # speed is pixels per frame; choose ~2-3 for smooth movement at 60 FPS
+                game_data['enemies'].append(Enemy(game_data['path'], speed=2.5))
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                # Check if clicked on any tower icon in the sidebar
+                for tower_type, tower_data in TOWER_TYPES.items():
+                    if tower_data['rect'].collidepoint(mx, my):
+                        game_data['dragging'] = True
+                        game_data['dragging_tower_type'] = tower_type
+                        game_data['drag_pos'] = (mx, my)
+                        break
+            elif event.type == pygame.MOUSEMOTION:
+                if game_data['dragging']:
+                    game_data['drag_pos'] = event.pos
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if game_data['dragging']:
+                    mx, my = event.pos
+                    # only allow placement outside sidebar
+                    if mx < sidebar.left:
+                        tower_class = TOWER_TYPES[game_data['dragging_tower_type']]['class']
+                        game_data['towers'].append(tower_class((mx, my)))
+                    # stop dragging regardless
+                    game_data['dragging'] = False
+                    game_data['dragging_tower_type'] = None
 
-    # update enemies (frame-based)
-    for e in enemies:
-        e.update()
-    
-    # check for enemies that reached the end
-    for e in enemies:
-        if e.reached_end and e.health > 0:
-            health -= 1
-            e.health = 0  # prevent multiple health loss from same enemy
-    
-    enemies = [e for e in enemies if e.is_alive()]
+    if current_state == MENU:
+        draw_menu()
+    elif current_state == GAME_OVER:
+        draw_game_over(game_data['health'])
+    elif current_state == PLAYING:
+        # update enemies (frame-based)
+        for e in game_data['enemies']:
+            e.update()
+        
+        # check for enemies that reached the end
+        for e in game_data['enemies']:
+            if e.reached_end and e.health > 0:
+                game_data['health'] -= 1
+                e.health = 0  # prevent multiple health loss from same enemy
+        
+        game_data['enemies'] = [e for e in game_data['enemies'] if e.is_alive()]
 
-    # update towers and collect projectiles
-    for tower in towers:
-        new_projectiles = tower.update(enemies)
-        projectiles.extend(new_projectiles)
+        # Check if health dropped to 0 or below
+        if game_data['health'] <= 0:
+            current_state = GAME_OVER
+            pygame.time.set_timer(SPAWN_EVENT, 0)
 
-    # update projectiles
-    for projectile in projectiles:
-        projectile.update()
-    projectiles = [p for p in projectiles if p.is_active()]
+        # update towers and collect projectiles
+        for tower in game_data['towers']:
+            new_projectiles = tower.update(game_data['enemies'])
+            game_data['projectiles'].extend(new_projectiles)
 
-    # draw
-    screen.fill((255, 255, 255))
+        # update projectiles
+        for projectile in game_data['projectiles']:
+            projectile.update()
+        game_data['projectiles'] = [p for p in game_data['projectiles'] if p.is_active()]
 
-    path.draw(screen)
+        # draw
+        screen.fill((255, 255, 255))
 
-    # draw towers
-    for tw in towers:
-        tw.draw(screen)
+        game_data['path'].draw(screen)
 
-    # draw projectiles
-    for proj in projectiles:
-        proj.draw(screen)
+        # draw towers
+        for tw in game_data['towers']:
+            tw.draw(screen)
 
-    # draw enemies
-    for e in enemies:
-        e.draw(screen)
+        # draw projectiles
+        for proj in game_data['projectiles']:
+            proj.draw(screen)
 
-    # sidebar
-    pygame.draw.rect(screen, (200, 200, 200), sidebar)
-    
-    # draw health counter
-    font = pygame.font.Font(None, 36)
-    health_text = font.render(f"Health: {health}", True, (0, 0, 0))
-    screen.blit(health_text, (sidebar.left + 10, 10))
-    
-    # draw tower palette icons
-    for tower_type, tower_data in TOWER_TYPES.items():
-        screen.blit(tower_data['image'], tower_data['rect'])
+        # draw enemies
+        for e in game_data['enemies']:
+            e.draw(screen)
 
-    # draw dragging preview
-    if dragging and dragging_tower_type:
-        mx, my = drag_pos
-        tower_image = TOWER_TYPES[dragging_tower_type]['image']
-        preview_rect = tower_image.get_rect(center=(mx, my))
-        screen.blit(tower_image, preview_rect)
+        # sidebar
+        pygame.draw.rect(screen, (200, 200, 200), sidebar)
+        
+        # draw health counter
+        font = pygame.font.Font(None, 36)
+        health_text = font.render(f"Health: {game_data['health']}", True, (0, 0, 0))
+        screen.blit(health_text, (sidebar.left + 10, 10))
+        
+        # draw tower palette icons
+        for tower_type, tower_data in TOWER_TYPES.items():
+            screen.blit(tower_data['image'], tower_data['rect'])
 
-    pygame.display.flip()
+        # draw dragging preview
+        if game_data['dragging'] and game_data['dragging_tower_type']:
+            mx, my = game_data['drag_pos']
+            tower_image = TOWER_TYPES[game_data['dragging_tower_type']]['image']
+            preview_rect = tower_image.get_rect(center=(mx, my))
+            screen.blit(tower_image, preview_rect)
+
+        pygame.display.flip()
 
 pygame.quit()
