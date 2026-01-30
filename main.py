@@ -17,23 +17,25 @@ GAME_OVER = "game_over"
 
 # sidebar area
 sidebar = pygame.Rect(650, 0, 150, 600)
-
 # Tower types available for placement
 TOWER_TYPES = {
     'piper': {
         'class': Piper,
         'image': piper_image,
         'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 60, 50, 50),
+        'cost': 1,
     },
     'spike': {
         'class': Spike,
         'image': spike_image,
         'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 130, 50, 50),
+        'cost': 3,
     },
     'jacky': {
         'class': Jacky,
         'image': jacky_image,
         'rect': pygame.Rect(sidebar.left + 10, sidebar.top + 200, 50, 50),
+        'cost': 2,
     },
 }
 
@@ -92,6 +94,7 @@ def init_game():
         'dragging_tower_type': None,
         'drag_pos': (0, 0),
         'health': 20,
+        'coins': 5,
         'path': Path([(50, 300), (300, 300), (300, 150), (600, 150)]),
     }
 
@@ -161,8 +164,13 @@ while running:
                     mx, my = event.pos
                     # only allow placement outside sidebar
                     if mx < sidebar.left:
-                        tower_class = TOWER_TYPES[game_data['dragging_tower_type']]['class']
-                        game_data['towers'].append(tower_class((mx, my)))
+                        tower_type = game_data['dragging_tower_type']
+                        tower_cost = TOWER_TYPES[tower_type]['cost']
+                        # only allow placement if player has enough coins
+                        if game_data['coins'] >= tower_cost:
+                            tower_class = TOWER_TYPES[tower_type]['class']
+                            game_data['towers'].append(tower_class((mx, my)))
+                            game_data['coins'] -= tower_cost
                     # stop dragging regardless
                     game_data['dragging'] = False
                     game_data['dragging_tower_type'] = None
@@ -176,11 +184,14 @@ while running:
         for e in game_data['enemies']:
             e.update()
         
-        # check for enemies that reached the end
+        # check for enemies that reached the end or died
         for e in game_data['enemies']:
             if e.reached_end and e.health > 0:
                 game_data['health'] -= 1
                 e.health = 0  # prevent multiple health loss from same enemy
+            elif e.health <= 0 and e.reached_end is False:
+                # Enemy defeated by towers
+                game_data['coins'] += 1
         
         game_data['enemies'] = [e for e in game_data['enemies'] if e.is_alive()]
 
@@ -207,14 +218,22 @@ while running:
         # sidebar
         pygame.draw.rect(screen, (200, 200, 200), sidebar)
         
-        # draw health counter
-        font = pygame.font.Font(None, 36)
+        # draw health and coins counter
+        font = pygame.font.Font(None, 28)
         health_text = font.render(f"Health: {game_data['health']}", True, (0, 0, 0))
+        coins_text = font.render(f"Coins: {game_data['coins']}", True, (0, 0, 0))
         screen.blit(health_text, (sidebar.left + 10, 10))
+        screen.blit(coins_text, (sidebar.left + 10, 40))
         
-        # draw tower palette icons
+        # draw tower palette icons with costs
+        cost_font = pygame.font.Font(None, 20)
         for tower_type, tower_data in TOWER_TYPES.items():
             screen.blit(tower_data['image'], tower_data['rect'])
+            # draw cost below the icon
+            cost_text = cost_font.render(f"${tower_data['cost']}", True, (0, 0, 0))
+            cost_rect = tower_data['rect'].copy()
+            cost_rect.top += 55
+            screen.blit(cost_text, cost_rect)
 
         # draw dragging preview
         if game_data['dragging'] and game_data['dragging_tower_type']:
